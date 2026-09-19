@@ -1,0 +1,359 @@
+@import "./tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0 0 var(--space-4) 0;
+  color: var(--ink);
+}
+
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 19px;
+}
+h3 {
+  font-size: 16px;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Numeric alignment - dates, currency, counts should line up like a ledger */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere - this is a tool people navigate by keyboard often */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* --- App shell --- */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) 0;
+}
+
+.sidebar-brand {
+  font-family: var(--font-display);
+  font-size: 17px;
+  padding: 0 var(--space-5) var(--space-5) var(--space-5);
+  border-bottom: 1px solid rgba(247, 245, 240, 0.15);
+  margin-bottom: var(--space-4);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-link {
+  color: rgba(247, 245, 240, 0.75);
+  text-decoration: none;
+  padding: var(--space-3) var(--space-5);
+  font-size: 14px;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: rgba(247, 245, 240, 0.06);
+  color: var(--paper);
+}
+
+.sidebar-link.active {
+  color: var(--paper);
+  border-left-color: var(--accent);
+  background: rgba(47, 93, 80, 0.25);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--space-4) var(--space-5) 0 var(--space-5);
+  border-top: 1px solid rgba(247, 245, 240, 0.15);
+  font-size: 13px;
+  color: rgba(247, 245, 240, 0.6);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6) var(--space-7);
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
+}
+
+/* --- Forms & buttons --- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+input,
+select {
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--paper);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+.btn-secondary:hover {
+  border-color: var(--ink);
+}
+
+.btn-danger {
+  background: var(--surface);
+  border-color: var(--status-canceled);
+  color: var(--status-canceled);
+}
+.btn-danger:hover {
+  background: var(--status-canceled-bg);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Tables (ledger style: hairlines, not cards) --- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+tbody td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+}
+
+tbody tr:hover {
+  background: rgba(47, 93, 80, 0.04);
+}
+
+tbody tr.clickable {
+  cursor: pointer;
+}
+
+/* --- Status pills --- */
+
+.status-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.status-pill.active {
+  color: var(--status-active);
+  background: var(--status-active-bg);
+}
+.status-pill.lapsed {
+  color: var(--status-lapsed);
+  background: var(--status-lapsed-bg);
+}
+.status-pill.canceled,
+.status-pill.failed {
+  color: var(--status-canceled);
+  background: var(--status-canceled-bg);
+}
+.status-pill.paused,
+.status-pill.pending {
+  color: var(--status-paused);
+  background: var(--status-paused-bg);
+}
+
+/* --- Misc --- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: var(--space-5);
+}
+
+.stat-row {
+  display: flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.stat {
+  min-width: 140px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: var(--space-2);
+}
+
+.empty-state {
+  padding: var(--space-7) 0;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.error-banner {
+  background: var(--status-canceled-bg);
+  color: var(--status-canceled);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 3px;
+  margin-bottom: var(--space-4);
+  font-size: 13px;
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+}
+
+.login-card {
+  width: 340px;
+  background: var(--surface);
+  border-radius: 4px;
+  padding: var(--space-7) var(--space-6);
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 800px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    overflow-x: auto;
+  }
+  .sidebar-brand,
+  .sidebar-footer {
+    display: none;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+  }
+  .main {
+    padding: var(--space-5);
+  }
+  .stat-row {
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+}

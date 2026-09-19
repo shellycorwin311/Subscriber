@@ -1,0 +1,35 @@
+:root {
+  /* Color */
+  --ink: #1a1f2b;
+  --ink-soft: #4a5164;
+  --paper: #f7f5f0;
+  --surface: #ffffff;
+  --rule: #d8d3c7;
+  --rule-strong: #b7b09f;
+  --accent: #2f5d50;
+  --accent-hover: #244a40;
+  --status-active: #2f7d46;
+  --status-active-bg: #e7f3ea;
+  --status-lapsed: #9a6b00;
+  --status-lapsed-bg: #faf1dc;
+  --status-canceled: #b4453d;
+  --status-canceled-bg: #fbeae8;
+  --status-paused: #4a5164;
+  --status-paused-bg: #eceae4;
+  --focus-ring: #2f5d50;
+
+  /* Type */
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --sidebar-width: 220px;
+}
