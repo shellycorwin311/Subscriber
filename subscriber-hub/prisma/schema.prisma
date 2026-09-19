@@ -1,0 +1,148 @@
+// Subscriber Hub - core data model
+// One shared database serving all 3 papers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionType {
+  PRINT
+  DIGITAL
+  PRINT_DIGITAL
+}
+
+enum SubscriptionStatus {
+  PENDING   // created, first payment not yet confirmed
+  ACTIVE
+  PAUSED    // vacation hold / temporary pause
+  LAPSED    // payment failed / past due, grace period
+  CANCELED
+}
+
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PENDING
+}
+
+enum StaffRole {
+  ADMIN
+  CUSTOMER_SERVICE
+  CIRCULATION
+}
+
+model Paper {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // used by WordPress plugin / Tecnavia to identify the title
+  createdAt DateTime @default(now())
+
+  subscriptions  Subscription[]
+  deliveryRoutes DeliveryRoute[]
+}
+
+model Subscriber {
+  id    String @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String @unique
+  phone     String?
+
+  // Billing address (used for Authorize.net)
+  billingAddressLine1 String?
+  billingAddressLine2 String?
+  billingCity         String?
+  billingState        String?
+  billingZip          String?
+
+  // Delivery address (for print) - separate since it can differ from billing
+  deliveryAddressLine1 String?
+  deliveryAddressLine2 String?
+  deliveryCity         String?
+  deliveryState        String?
+  deliveryZip          String?
+
+  // Authorize.net Customer Information Manager (CIM) profile id
+  authorizeNetProfileId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@index([lastName, deliveryZip])
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  subscriberId String
+  paperId      String
+  type         SubscriptionType
+  tier         String             // e.g. "monthly", "annual", "digital-only-annual"
+  status       SubscriptionStatus @default(PENDING)
+
+  startDate    DateTime
+  renewalDate  DateTime
+  pausedAt     DateTime?
+  canceledAt   DateTime?
+
+  // Authorize.net Automated Recurring Billing (ARB) subscription id
+  authorizeNetSubscriptionId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id])
+  paper      Paper      @relation(fields: [paperId], references: [id])
+  payments   Payment[]
+  routeAssignment DeliveryRoute?
+
+  @@index([paperId, status])
+  @@index([renewalDate])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  subscriberId   String
+  subscriptionId String?
+  amountCents    Int
+  currency       String        @default("USD")
+  status         PaymentStatus
+  authorizeNetTransactionId String? @unique
+  processedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  subscriber   Subscriber    @relation(fields: [subscriberId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriberId])
+}
+
+model DeliveryRoute {
+  id             String   @id @default(cuid())
+  paperId        String
+  name           String   // e.g. "Route 12 - Downtown"
+  sequence       Int      // stop order along the route
+  subscriptionId String   @unique
+  createdAt      DateTime @default(now())
+
+  paper        Paper        @relation(fields: [paperId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([paperId, name, sequence])
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         StaffRole @default(CUSTOMER_SERVICE)
+  createdAt    DateTime  @default(now())
+}
