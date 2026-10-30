@@ -104,6 +104,7 @@ model Paper {
   rackDeliveries  RackDelivery[]
   pricing   DealerPricing[]
   pressRuns PressRun[]
+  rates     Rate[]
 }
 
 model Subscriber {
@@ -384,4 +385,43 @@ model DriverPayPeriod {
   truck Truck @relation(fields: [truckId], references: [id])
 
   @@unique([truckId, periodStart, periodEnd])
+}
+
+// Subscription rates (imported from Newzware). Step-up promos are linked
+// by chainKey: a rate with nextStep N rolls into the rate in the same
+// chain whose step is N.
+model Rate {
+  id                String    @id @default(cuid())
+  paperId           String
+  newzwareId        Int       @unique
+  code              String
+  description       String
+  onlineDescription String?
+  deliveryMethod    String    // CARRIER, MAIL, DIGITAL
+  product           String    // PRINT, DIGITAL, PRINT_DIGITAL
+  issueDays         String    // e.g. MWF, WFS, WE, SO
+  lengthCount       Int
+  lengthUnit        String    // WEEKS or DAYS
+  zone              String?
+  payMethod         String    // PAID or COMP
+  easyPay           Boolean   @default(false)
+  isGift            Boolean   @default(false)
+  isOldRate         Boolean   @default(false)
+  priceCents        Int
+  fullRateCents     Int
+  step              Int       @default(0)
+  nextStep          Int       @default(0)
+  chainKey          String
+  effectiveDate     DateTime?
+  inactiveDate      DateTime?
+  showOnline        Boolean   @default(false)
+  glAccount         String?
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  paper Paper @relation(fields: [paperId], references: [id])
+
+  @@index([paperId, active])
+  @@index([chainKey, step])
 }
