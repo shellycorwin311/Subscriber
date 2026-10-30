@@ -598,3 +598,45 @@ export function fetchBatchStatements(month: string) {
 }
 
 export { getToken };
+// --- Subscription rates ---
+
+export interface Rate {
+  id: string;
+  paperId: string;
+  paper: Paper;
+  newzwareId: number;
+  code: string;
+  description: string;
+  onlineDescription: string | null;
+  deliveryMethod: "CARRIER" | "MAIL" | "DIGITAL";
+  product: "PRINT" | "DIGITAL" | "PRINT_DIGITAL";
+  issueDays: string;
+  lengthCount: number;
+  lengthUnit: "WEEKS" | "DAYS";
+  zone: string | null;
+  payMethod: "PAID" | "COMP";
+  easyPay: boolean;
+  isGift: boolean;
+  isOldRate: boolean;
+  priceCents: number;
+  fullRateCents: number;
+  step: number;
+  nextStep: number;
+  chainKey: string;
+  effectiveDate: string | null;
+  inactiveDate: string | null;
+  showOnline: boolean;
+  glAccount: string | null;
+  active: boolean;
+}
+
+export function fetchRates(paperId?: string, includeInactive = false) {
+  const params = new URLSearchParams();
+  if (paperId) params.set("paperId", paperId);
+  if (includeInactive) params.set("includeInactive", "true");
+  return request<Rate[]>(`/api/rates?${params.toString()}`);
+}
+
+export function updateRate(id: string, data: Partial<Rate>) {
+  return request<Rate>(`/api/rates/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}

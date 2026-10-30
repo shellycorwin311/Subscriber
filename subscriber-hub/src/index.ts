@@ -15,6 +15,7 @@ import { rackRoutesRouter } from "./routes/rackRoutes";
 import { pressRunsRouter } from "./routes/pressRuns";
 import { statementsRouter } from "./routes/statements";
 import { reportsRouter } from "./routes/reports";
+import { ratesRouter } from "./routes/rates";
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,7 @@ app.use("/api/rack-routes", rackRoutesRouter);
 app.use("/api/press-runs", pressRunsRouter);
 app.use("/api/statements", statementsRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/rates", ratesRouter);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(port, () => {

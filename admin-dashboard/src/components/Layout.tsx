@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: "/trucks", label: "Trucks" },
   { to: "/press-runs", label: "Press Runs" },
   { to: "/returns", label: "Returns Entry" },
+     { to: "/rates", label: "Rates" },
   { to: "/statements", label: "Statements" },
   { to: "/statements/all", label: "All Statements" },
   { to: "/reports", label: "Reports" },

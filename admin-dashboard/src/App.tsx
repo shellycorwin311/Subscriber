@@ -12,6 +12,7 @@ import { RackRoutesPage } from "./pages/RackRoutesPage";
 import { TrucksPage } from "./pages/TrucksPage";
 import { TruckDetailPage } from "./pages/TruckDetailPage";
 import { PressRunsPage } from "./pages/PressRunsPage";import { ReturnsEntryPage } from "./pages/ReturnsEntryPage";
+   import { RatesPage } from "./pages/RatesPage";
 import { StatementPage } from "./pages/StatementPage";
 import { BatchStatementsPage } from "./pages/BatchStatementsPage";
 import { ReportsPage } from "./pages/ReportsPage";
@@ -42,6 +43,7 @@ export function App() {
             <Route path="/trucks" element={<TrucksPage />} />
 <Route path="/trucks/:id" element={<TruckDetailPage />} />
 <Route path="/press-runs" element={<PressRunsPage />} /><Route path="/returns" element={<ReturnsEntryPage />} />
+   <Route path="/rates" element={<RatesPage />} />
 <Route path="/statements" element={<StatementPage />} />
 <Route path="/statements/all" element={<BatchStatementsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
