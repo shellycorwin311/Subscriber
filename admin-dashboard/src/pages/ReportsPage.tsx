@@ -7,6 +7,7 @@ export function ReportsPage() {
     null
   );
   const [churn, setChurn] = useState<{ canceledCount: number } | null>(null);
+  const [rackSales, setRackSales] = useState<api.RackSalesRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,11 +16,13 @@ export function ReportsPage() {
       api.fetchCirculationReport(),
       api.fetchRevenueReport(),
       api.fetchChurnReport(),
+      api.fetchRackSalesReport(),
     ])
-      .then(([circ, rev, ch]) => {
+      .then(([circ, rev, ch, rack]) => {
         setCirculation(circ);
         setRevenue(rev);
         setChurn(ch);
+        setRackSales(rack.results);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Couldn't load reports"))
       .finally(() => setLoading(false));
@@ -54,7 +57,7 @@ export function ReportsPage() {
       </div>
 
       <h2>Circulation by paper</h2>
-      <table>
+      <table style={{ marginBottom: 32 }}>
         <thead>
           <tr>
             <th>Paper</th>
@@ -78,6 +81,39 @@ export function ReportsPage() {
           ))}
         </tbody>
       </table>
+
+      <h2>Single-copy / rack sales</h2>
+      <p style={{ color: "var(--ink-soft)", marginTop: -8, marginBottom: 16, fontSize: 13 }}>
+        Reconciled dealer deliveries only.
+      </p>
+      {rackSales.every((r) => r.delivered === 0) ? (
+        <div className="empty-state">No reconciled rack deliveries yet.</div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Paper</th>
+              <th>Delivered</th>
+              <th>Sold</th>
+              <th>Returned</th>
+              <th>Sell-through</th>
+              <th>Credit issued</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rackSales.map((row) => (
+              <tr key={row.paper}>
+                <td>{row.paper}</td>
+                <td className="tabular">{row.delivered}</td>
+                <td className="tabular">{row.sold}</td>
+                <td className="tabular">{row.returned}</td>
+                <td className="tabular">{(row.sellThroughRate * 100).toFixed(0)}%</td>
+                <td className="tabular">${row.creditIssued.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

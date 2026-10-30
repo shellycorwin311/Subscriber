@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum SubscriptionType {
@@ -37,14 +38,72 @@ enum StaffRole {
   CIRCULATION
 }
 
+enum DealerStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum DealerType {
+  DEALER
+  VENDING
+  SERVICE
+}
+
+enum DeliveryMethod {
+  CARRIER
+  MAIL
+}
+
+enum DealerPaymentMethod {
+  CHECK
+  CARD
+  ACH
+}
+
+enum RackDeliveryStatus {
+  DELIVERED   // copies dropped, not yet reconciled
+  RECONCILED  // dealer reported sold/returned, credit computed
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum DriverType {
+  EMPLOYEE
+  CONTRACTOR
+}
+
+enum PayPeriodStatus {
+  OPEN
+  INVOICED
+  PAID
+}
+
 model Paper {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique // used by WordPress plugin / Tecnavia to identify the title
   createdAt DateTime @default(now())
 
-  subscriptions  Subscription[]
-  deliveryRoutes DeliveryRoute[]
+  // Used to compute single-copy dealer credit for unsold returns.
+  coverPriceCents      Int? // retail cover price per copy
+  wholesalePriceCents  Int? // what the publisher credits the dealer per unsold copy
+
+  subscriptions   Subscription[]
+  deliveryRoutes  DeliveryRoute[]
+  standingOrders  DealerStandingOrder[]
+  rackRoutes      RackRoute[]
+  rackDeliveries  RackDelivery[]
+  pricing   DealerPricing[]
+  pressRuns PressRun[]
 }
 
 model Subscriber {
@@ -92,6 +151,7 @@ model Subscription {
   renewalDate  DateTime
   pausedAt     DateTime?
   canceledAt   DateTime?
+  deliveryMethod DeliveryMethod @default(CARRIER)
 
   // Authorize.net Automated Recurring Billing (ARB) subscription id
   authorizeNetSubscriptionId String? @unique
@@ -145,4 +205,183 @@ model StaffUser {
   passwordHash String
   role         StaffRole @default(CUSTOMER_SERVICE)
   createdAt    DateTime  @default(now())
+}
+
+// --- Single-copy / rack sales ---
+// A separate world from home-delivery Subscribers: a Dealer is a business
+// (newsstand, convenience store, grocery store) that receives bulk copies
+// to sell, reports back what sold vs. went unsold, and gets credited for
+// unsold returns.
+
+model Dealer {
+  id          String       @id @default(cuid())
+  dealerNumber String?     @unique // human-facing account number, e.g. "D-1001"
+  name        String       // business name
+  contactName String?
+  phone       String?
+  email       String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  zip          String?
+  status       DealerStatus @default(ACTIVE)
+  creditTerms  String?      // free-text, e.g. "Net 30", "Credit at next delivery"
+  dealerType DealerType @default(DEALER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  standingOrders DealerStandingOrder[]
+  rackRouteStops RackRouteStop[]
+  deliveries     RackDelivery[]
+  pricing  DealerPricing[]
+  payments DealerPayment[]
+
+  @@index([name, zip])
+}
+
+// Default quantity of a given paper a dealer receives on a given issue day
+// (e.g. Daily Gazette Mon/Wed/Fri, Weekly Courier Wed only). One row per
+// dealer+paper+day. Used as the starting point when creating a RackDelivery.
+model DealerStandingOrder {
+  id        String    @id @default(cuid())
+  dealerId  String
+  paperId   String
+  dayOfWeek DayOfWeek
+  quantity  Int
+  active    Boolean   @default(true)
+
+  dealer Dealer @relation(fields: [dealerId], references: [id])
+  paper  Paper  @relation(fields: [paperId], references: [id])
+
+  @@unique([dealerId, paperId, dayOfWeek])
+}
+
+// A route for dropping bulk copies at dealer locations (distinct from
+// DeliveryRoute, which is for individual home-delivery subscribers).
+model RackRoute {
+  id        String   @id @default(cuid())
+  paperId   String
+  name      String   // e.g. "Rack Route 3 - Downtown"
+  createdAt DateTime @default(now())
+  truckId String?
+
+  paper Paper           @relation(fields: [paperId], references: [id])
+  truck Truck? @relation(fields: [truckId], references: [id])
+  stops RackRouteStop[]
+
+  @@index([paperId, name])
+}
+
+model RackRouteStop {
+  id          String @id @default(cuid())
+  rackRouteId String
+  dealerId    String
+  sequence    Int // stop order along the route
+
+  rackRoute RackRoute @relation(fields: [rackRouteId], references: [id])
+  dealer    Dealer    @relation(fields: [dealerId], references: [id])
+
+  @@unique([rackRouteId, dealerId])
+  @@index([rackRouteId, sequence])
+}
+
+// One delivery event to one dealer for one paper: copies dropped, later
+// reconciled against copies sold/returned to compute a credit for the
+// unsold copies (returns).
+model RackDelivery {
+  id           String             @id @default(cuid())
+  dealerId     String
+  paperId      String
+  deliveryDate DateTime
+  quantityDelivered Int
+  quantitySold      Int?
+  quantityReturned  Int?
+  creditCents       Int?  // computed at reconciliation: quantityReturned * wholesalePriceCents
+  status            RackDeliveryStatus @default(DELIVERED)
+  priceCentsApplied Int? // wholesale rate in effect for this dealer/paper/day at delivery time
+
+  createdAt   DateTime  @default(now())
+  reconciledAt DateTime?
+
+  dealer Dealer @relation(fields: [dealerId], references: [id])
+  paper  Paper  @relation(fields: [paperId], references: [id])
+
+  @@index([dealerId, paperId, deliveryDate])
+}
+
+model DealerPricing {
+  id            String    @id @default(cuid())
+  dealerId      String?   // null = standard rack/vending rate
+  paperId       String
+  dayOfWeek     DayOfWeek
+  priceCents    Int
+  effectiveDate DateTime  @default(now())
+
+  dealer Dealer? @relation(fields: [dealerId], references: [id])
+  paper  Paper   @relation(fields: [paperId], references: [id])
+
+  @@index([dealerId, paperId, dayOfWeek])
+}
+
+model DealerPayment {
+  id              String   @id @default(cuid())
+  dealerId        String
+  paymentDate     DateTime
+  amountCents     Int
+  referenceNumber String?
+  paymentMethod   DealerPaymentMethod @default(CHECK)
+  createdAt       DateTime @default(now())
+
+  dealer Dealer @relation(fields: [dealerId], references: [id])
+
+  @@index([dealerId, paymentDate])
+}
+
+model Truck {
+  id          String   @id @default(cuid())
+  truckNumber String   @unique
+  driverName  String?
+  phone       String?
+  active      Boolean  @default(true)
+  driverType      DriverType @default(EMPLOYEE)
+  addressLine1    String?
+  city            String?
+  state           String?
+  zip             String?
+  payPerDropCents Int?
+
+  rackRoutes RackRoute[]
+  payPeriods DriverPayPeriod[]
+}
+
+model PressRun {
+  id         String   @id @default(cuid())
+  paperId    String
+  runDate    DateTime
+  bundleSize Int
+
+  paper Paper @relation(fields: [paperId], references: [id])
+
+  @@unique([paperId, runDate])
+}
+
+model DriverPayPeriod {
+  id                       String          @id @default(cuid())
+  truckId                  String
+  periodStart              DateTime
+  periodEnd                DateTime
+  dropCount                Int             @default(0)
+  dropPayCents             Int             @default(0)
+  fuelMileageCents         Int             @default(0)
+  postOfficeDropsCents     Int             @default(0)
+  advertisingDeliveryCents Int             @default(0)
+  totalCents               Int             @default(0)
+  status                   PayPeriodStatus @default(OPEN)
+  createdAt                DateTime        @default(now())
+
+  truck Truck @relation(fields: [truckId], references: [id])
+
+  @@unique([truckId, periodStart, periodEnd])
 }

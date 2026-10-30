@@ -26,17 +26,32 @@ async function main() {
     prisma.paper.upsert({
       where: { slug: "daily-gazette" },
       update: {},
-      create: { name: "The Daily Gazette", slug: "daily-gazette" },
+      create: {
+        name: "The Daily Gazette",
+        slug: "daily-gazette",
+        coverPriceCents: 200, // $2.00 cover price
+        wholesalePriceCents: 100, // $1.00 credited per unsold return
+      },
     }),
     prisma.paper.upsert({
       where: { slug: "morning-tribune" },
       update: {},
-      create: { name: "The Morning Tribune", slug: "morning-tribune" },
+      create: {
+        name: "The Morning Tribune",
+        slug: "morning-tribune",
+        coverPriceCents: 250,
+        wholesalePriceCents: 125,
+      },
     }),
     prisma.paper.upsert({
       where: { slug: "weekly-courier" },
       update: {},
-      create: { name: "The Weekly Courier", slug: "weekly-courier" },
+      create: {
+        name: "The Weekly Courier",
+        slug: "weekly-courier",
+        coverPriceCents: 300,
+        wholesalePriceCents: 150,
+      },
     }),
   ]);
 
@@ -68,6 +83,32 @@ async function main() {
       renewalDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     },
   });
+
+  // Sample dealer account for testing single-copy/rack sales
+  const dealer = await prisma.dealer.upsert({
+    where: { id: "seed-dealer-1" },
+    update: {},
+    create: {
+      id: "seed-dealer-1",
+      name: "Corner Market Newsstand",
+      contactName: "Sam Rivera",
+      addressLine1: "500 5th Ave",
+      city: "Denver",
+      state: "CO",
+      zip: "80202",
+      creditTerms: "Net 30",
+    },
+  });
+
+  for (const day of ["MON", "WED", "FRI"] as const) {
+    await prisma.dealerStandingOrder.upsert({
+      where: {
+        dealerId_paperId_dayOfWeek: { dealerId: dealer.id, paperId: papers[0].id, dayOfWeek: day },
+      },
+      update: {},
+      create: { dealerId: dealer.id, paperId: papers[0].id, dayOfWeek: day, quantity: 25 },
+    });
+  }
 
   console.log("Seed complete.");
 }

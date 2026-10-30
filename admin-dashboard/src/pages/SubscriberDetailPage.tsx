@@ -3,14 +3,39 @@ import { useParams, Link } from "react-router-dom";
 import * as api from "../api/client";
 import { StatusPill } from "../components/StatusPill";
 
+interface EditableFields {
+  email: string;
+  phone: string;
+  deliveryAddressLine1: string;
+  deliveryCity: string;
+  deliveryState: string;
+  deliveryZip: string;
+}
+
+function fieldsFromSubscriber(sub: api.Subscriber): EditableFields {
+  return {
+    email: sub.email,
+    phone: sub.phone ?? "",
+    deliveryAddressLine1: sub.deliveryAddressLine1 ?? "",
+    deliveryCity: sub.deliveryCity ?? "",
+    deliveryState: sub.deliveryState ?? "",
+    deliveryZip: sub.deliveryZip ?? "",
+  };
+}
+
 export function SubscriberDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [subscriber, setSubscriber] = useState<api.Subscriber | null>(null);
   const [payments, setPayments] = useState<api.Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savingField, setSavingField] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [fields, setFields] = useState<EditableFields | null>(null);
+  const [savedFields, setSavedFields] = useState<EditableFields | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -27,6 +52,9 @@ export function SubscriberDetailPage() {
       ]);
       setSubscriber(sub);
       setPayments(hist);
+      const initial = fieldsFromSubscriber(sub);
+      setFields(initial);
+      setSavedFields(initial);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load this subscriber");
     } finally {
@@ -34,17 +62,37 @@ export function SubscriberDetailPage() {
     }
   }
 
-  async function handleFieldSave(field: keyof api.Subscriber, value: string) {
-    if (!subscriber) return;
-    setSavingField(true);
+  const isDirty =
+    fields !== null && savedFields !== null && JSON.stringify(fields) !== JSON.stringify(savedFields);
+
+  function updateField(key: keyof EditableFields, value: string) {
+    setSaveSuccess(false);
+    setFields((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  async function handleSave() {
+    if (!subscriber || !fields) return;
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
     try {
-      const updated = await api.updateSubscriber(subscriber.id, { [field]: value });
+      const updated = await api.updateSubscriber(subscriber.id, fields);
       setSubscriber(updated);
+      const newFields = fieldsFromSubscriber(updated);
+      setFields(newFields);
+      setSavedFields(newFields);
+      setSaveSuccess(true);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Couldn't save that change");
+      setSaveError(err instanceof Error ? err.message : "Couldn't save these changes");
     } finally {
-      setSavingField(false);
+      setSaving(false);
     }
+  }
+
+  function handleDiscard() {
+    if (savedFields) setFields(savedFields);
+    setSaveError(null);
+    setSaveSuccess(false);
   }
 
   async function handleSubscriptionAction(
@@ -72,7 +120,7 @@ export function SubscriberDetailPage() {
 
   if (loading) return <p style={{ color: "var(--ink-soft)" }}>Loading…</p>;
   if (error) return <div className="error-banner">{error}</div>;
-  if (!subscriber) return null;
+  if (!subscriber || !fields) return null;
 
   return (
     <div>
@@ -87,57 +135,91 @@ export function SubscriberDetailPage() {
       </div>
 
       {actionError && <div className="error-banner">{actionError}</div>}
+      {saveError && <div className="error-banner">{saveError}</div>}
+      {saveSuccess && (
+        <div
+          className="error-banner"
+          style={{ background: "var(--status-active-bg)", color: "var(--status-active)" }}
+        >
+          Changes saved.
+        </div>
+      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 16 }}>
         <div className="card">
           <h3>Contact & billing</h3>
-          <EditableField
-            label="Email"
-            value={subscriber.email}
-            onSave={(v) => handleFieldSave("email", v)}
-            disabled={savingField}
-          />
-          <EditableField
-            label="Phone"
-            value={subscriber.phone ?? ""}
-            onSave={(v) => handleFieldSave("phone", v)}
-            disabled={savingField}
-          />
+          <div className="field">
+            <label htmlFor="field-email">Email</label>
+            <input
+              id="field-email"
+              value={fields.email}
+              disabled={saving}
+              onChange={(e) => updateField("email", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="field-phone">Phone</label>
+            <input
+              id="field-phone"
+              value={fields.phone}
+              disabled={saving}
+              onChange={(e) => updateField("phone", e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="card">
           <h3>Delivery address</h3>
-          <EditableField
-            label="Address"
-            value={subscriber.deliveryAddressLine1 ?? ""}
-            onSave={(v) => handleFieldSave("deliveryAddressLine1", v)}
-            disabled={savingField}
-          />
-          <EditableField
-            label="City"
-            value={subscriber.deliveryCity ?? ""}
-            onSave={(v) => handleFieldSave("deliveryCity", v)}
-            disabled={savingField}
-          />
+          <div className="field">
+            <label htmlFor="field-address">Address</label>
+            <input
+              id="field-address"
+              value={fields.deliveryAddressLine1}
+              disabled={saving}
+              onChange={(e) => updateField("deliveryAddressLine1", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="field-city">City</label>
+            <input
+              id="field-city"
+              value={fields.deliveryCity}
+              disabled={saving}
+              onChange={(e) => updateField("deliveryCity", e.target.value)}
+            />
+          </div>
           <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <EditableField
-                label="State"
-                value={subscriber.deliveryState ?? ""}
-                onSave={(v) => handleFieldSave("deliveryState", v)}
-                disabled={savingField}
+            <div style={{ flex: 1 }} className="field">
+              <label htmlFor="field-state">State</label>
+              <input
+                id="field-state"
+                value={fields.deliveryState}
+                disabled={saving}
+                onChange={(e) => updateField("deliveryState", e.target.value)}
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <EditableField
-                label="Zip"
-                value={subscriber.deliveryZip ?? ""}
-                onSave={(v) => handleFieldSave("deliveryZip", v)}
-                disabled={savingField}
+            <div style={{ flex: 1 }} className="field">
+              <label htmlFor="field-zip">Zip</label>
+              <input
+                id="field-zip"
+                value={fields.deliveryZip}
+                disabled={saving}
+                onChange={(e) => updateField("deliveryZip", e.target.value)}
               />
             </div>
           </div>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 32 }}>
+        <button className="btn btn-primary" disabled={!isDirty || saving} onClick={handleSave}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {isDirty && !saving && (
+          <button className="btn btn-secondary" onClick={handleDiscard}>
+            Discard changes
+          </button>
+        )}
       </div>
 
       <h2>Subscriptions</h2>
@@ -232,41 +314,4 @@ export function SubscriberDetailPage() {
 
 function formatType(type: string) {
   return type === "PRINT_DIGITAL" ? "Print + Digital" : type.charAt(0) + type.slice(1).toLowerCase();
-}
-
-function EditableField({
-  label,
-  value,
-  onSave,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  disabled?: boolean;
-}) {
-  const [draft, setDraft] = useState(value);
-  const [editing, setEditing] = useState(false);
-
-  useEffect(() => setDraft(value), [value]);
-
-  function commit() {
-    setEditing(false);
-    if (draft !== value) onSave(draft);
-  }
-
-  return (
-    <div className="field">
-      <label>{label}</label>
-      <input
-        value={draft}
-        disabled={disabled}
-        onFocus={() => setEditing(true)}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        style={editing ? { borderColor: "var(--accent)" } : undefined}
-      />
-    </div>
-  );
 }

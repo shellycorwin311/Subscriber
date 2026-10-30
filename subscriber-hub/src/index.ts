@@ -9,6 +9,11 @@ import { subscriptionsRouter } from "./routes/subscriptions";
 import { entitlementsRouter } from "./routes/entitlements";
 import { paymentsRouter } from "./routes/payments";
 import { deliveryRoutesRouter } from "./routes/deliveryRoutes";
+import { dealersRouter } from "./routes/dealers";
+import { trucksRouter } from "./routes/trucks";
+import { rackRoutesRouter } from "./routes/rackRoutes";
+import { pressRunsRouter } from "./routes/pressRuns";
+import { statementsRouter } from "./routes/statements";
 import { reportsRouter } from "./routes/reports";
 
 const app = express();
@@ -24,6 +29,11 @@ app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/entitlements", entitlementsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/delivery-routes", deliveryRoutesRouter);
+app.use("/api/dealers", dealersRouter);
+app.use("/api/trucks", trucksRouter);
+app.use("/api/rack-routes", rackRoutesRouter);
+app.use("/api/press-runs", pressRunsRouter);
+app.use("/api/statements", statementsRouter);
 app.use("/api/reports", reportsRouter);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
